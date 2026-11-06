@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Application
+    x:Class="TapSync.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:TapSync">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+                <!-- Other merged dictionaries here -->
+            </ResourceDictionary.MergedDictionaries>
+            <!-- Color resources for status indicators -->
+            <SolidColorBrush x:Key="SuccessFill" Color="#00CC00" />
+            <SolidColorBrush x:Key="ErrorFill" Color="#FF0000" />
+            <SolidColorBrush x:Key="WarningFill" Color="#FFC000" />
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
