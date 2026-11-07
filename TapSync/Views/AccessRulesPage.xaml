@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="TapSync.Views.AccessRulesPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel Padding="24">
+        <TextBlock Text="Access Rules and Zones" Style="{ThemeResource HeaderTextBlockStyle}"/>
+    </StackPanel>
+</Page>

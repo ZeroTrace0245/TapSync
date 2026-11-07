@@ -180,5 +180,54 @@ namespace TapSync.Services
                 }
             }
         }
+
+        public class DashboardMetrics
+        {
+            public int CheckedInCount { get; set; }
+            public int TotalAttendees { get; set; }
+            public double VIPCapacityPercentage { get; set; }
+            public double GeneralCapacityPercentage { get; set; }
+            public double StaffCapacityPercentage { get; set; }
+        }
+
+        public DashboardMetrics GetDashboardMetrics()
+        {
+            if (_currentEvent == null)
+                throw new InvalidOperationException("No event available");
+
+            var eventAttendees = _attendees.Where(a => a.EventId == _currentEvent.Id).ToList();
+            var checkedIn = eventAttendees.Count(a => a.CheckInStatus == "CheckedIn");
+
+            var vipTotal = eventAttendees.Count(a => a.Category == "VIP");
+            var vipCheckedIn = eventAttendees.Count(a => a.Category == "VIP" && a.CheckInStatus == "CheckedIn");
+            var vipCapacity = vipTotal > 0 ? (double)vipCheckedIn / vipTotal * 100 : 0;
+
+            var generalTotal = eventAttendees.Count(a => a.Category == "General");
+            var generalCheckedIn = eventAttendees.Count(a => a.Category == "General" && a.CheckInStatus == "CheckedIn");
+            var generalCapacity = generalTotal > 0 ? (double)generalCheckedIn / generalTotal * 100 : 0;
+
+            var staffTotal = eventAttendees.Count(a => a.Category == "Staff");
+            var staffCheckedIn = eventAttendees.Count(a => a.Category == "Staff" && a.CheckInStatus == "CheckedIn");
+            var staffCapacity = staffTotal > 0 ? (double)staffCheckedIn / staffTotal * 100 : 0;
+
+            return new DashboardMetrics
+            {
+                CheckedInCount = checkedIn,
+                TotalAttendees = eventAttendees.Count,
+                VIPCapacityPercentage = vipCapacity,
+                GeneralCapacityPercentage = generalCapacity,
+                StaffCapacityPercentage = staffCapacity
+            };
+        }
+
+        private static MockDataService? _instance;
+        public static MockDataService GetInstance()
+        {
+            if (_instance == null)
+            {
+                _instance = new MockDataService();
+            }
+            return _instance;
+        }
     }
 }

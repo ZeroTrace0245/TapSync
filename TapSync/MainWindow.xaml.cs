@@ -1,21 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Navigation;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 using TapSync.Views;
-
-// To learn more about WinUI, the WinUI project structure,
-// and more about our project templates, see: http://aka.ms/winui-project-info.
 
 namespace TapSync
 {
@@ -24,28 +9,41 @@ namespace TapSync
         public MainWindow()
         {
             InitializeComponent();
-
             ExtendsContentIntoTitleBar = true;
             SetTitleBar(AppTitleBar);
-
             AppWindow.SetIcon("AppIcon.ico");
 
-            // Load dashboard on startup
             ContentFrame.Navigate(typeof(DashboardPage));
+            NavView.SelectedItem = NavView.MenuItems[0];
         }
 
-        private void NavButton_Click(object sender, RoutedEventArgs e)
+        private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
         {
-            if (sender is Button button)
+            if (args.SelectedItemContainer is NavigationViewItem item)
             {
-                string tag = button.Name;
+                string tag = (string)item.Tag;
 
-                if (tag == "DashboardButton")
-                    ContentFrame.Navigate(typeof(DashboardPage));
-                else if (tag == "AttendeesButton")
-                    ContentFrame.Navigate(typeof(AttendeesPage));
-                else if (tag == "AccessButton")
-                    ContentFrame.Navigate(typeof(AccessPage));
+                switch (tag)
+                {
+                    case "Dashboard":
+                        ContentFrame.Navigate(typeof(DashboardPage));
+                        break;
+                    case "EventAdmin":
+                        ContentFrame.Navigate(typeof(EventAdminPage));
+                        break;
+                    case "Registration":
+                        ContentFrame.Navigate(typeof(RegistrationPage));
+                        break;
+                    case "NFCCredentials":
+                        ContentFrame.Navigate(typeof(NFCCredentialsPage));
+                        break;
+                    case "AccessRules":
+                        ContentFrame.Navigate(typeof(AccessRulesPage));
+                        break;
+                    case "RollCall":
+                        ContentFrame.Navigate(typeof(RollCallPage));
+                        break;
+                }
             }
         }
     }

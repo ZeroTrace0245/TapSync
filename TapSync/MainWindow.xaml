@@ -9,7 +9,7 @@
     Title="TapSync"
     mc:Ignorable="d">
     <Window.SystemBackdrop>
-        <MicaBackdrop />
+        <MicaBackdrop Kind="Base" />
     </Window.SystemBackdrop>
 
     <Grid>
@@ -18,30 +18,26 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <TitleBar x:Name="AppTitleBar" Title="TapSync">
-            <TitleBar.IconSource>
-                <ImageIconSource ImageSource="AppIcon.ico" />
-            </TitleBar.IconSource>
-        </TitleBar>
+        <TitleBar x:Name="AppTitleBar" />
 
-        <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+        <NavigationView
+            Grid.Row="1"
+            x:Name="NavView"
+            IsBackButtonVisible="Collapsed"
+            IsPaneOpen="True"
+            PaneDisplayMode="Left"
+            SelectionChanged="NavView_SelectionChanged">
 
-            <!-- Navigation Panel -->
-            <StackPanel Grid.Column="0" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Width="200" Spacing="0" Padding="0">
-                <TextBlock Text="TapSync" Padding="16,16,16,8" Style="{ThemeResource TitleTextBlockStyle}" />
+            <NavigationView.MenuItems>
+                <NavigationViewItem Icon="Home" Content="Dashboard" Tag="Dashboard" />
+                <NavigationViewItem Icon="Admin" Content="Event Administration" Tag="EventAdmin" />
+                <NavigationViewItem Icon="People" Content="Registration" Tag="Registration" />
+                <NavigationViewItem Icon="ContactInfo" Content="NFC Credentials" Tag="NFCCredentials" />
+                <NavigationViewItem Icon="AllApps" Content="Access Rules" Tag="AccessRules" />
+                <NavigationViewItem Icon="Emoji2" Content="Emergency Roll Call" Tag="RollCall" />
+            </NavigationView.MenuItems>
 
-                <!-- Navigation Items -->
-                <Button x:Name="DashboardButton" Content="📊 Dashboard" Click="NavButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
-                <Button x:Name="AttendeesButton" Content="👥 Attendees" Click="NavButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
-                <Button x:Name="AccessButton" Content="🚪 Access Activity" Click="NavButton_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
-            </StackPanel>
-
-            <!-- Content Frame -->
-            <Frame x:Name="ContentFrame" Grid.Column="1" />
-        </Grid>
+            <Frame x:Name="ContentFrame" />
+        </NavigationView>
     </Grid>
 </Window>
