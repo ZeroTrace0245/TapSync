@@ -30,6 +30,7 @@
 
             <NavigationView.MenuItems>
                 <NavigationViewItem Icon="Home" Content="Dashboard" Tag="Dashboard" />
+                <NavigationViewItem Icon="MapPin" Content="Live Heatmap" Tag="Heatmap" />
                 <NavigationViewItem Icon="Admin" Content="Event Administration" Tag="EventAdmin" />
                 <NavigationViewItem Icon="People" Content="Registration" Tag="Registration" />
                 <NavigationViewItem Icon="ContactInfo" Content="NFC Credentials" Tag="NFCCredentials" />

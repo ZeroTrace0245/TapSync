@@ -6,15 +6,94 @@ namespace TapSync
 {
     public sealed partial class MainWindow : Window
     {
+        private Frame _contentFrame;
+        private NavigationView _navView;
+
         public MainWindow()
         {
-            InitializeComponent();
+            // Initialize the basic window
+            this.Content = new Grid();
             ExtendsContentIntoTitleBar = true;
-            SetTitleBar(AppTitleBar);
             AppWindow.SetIcon("AppIcon.ico");
 
-            ContentFrame.Navigate(typeof(DashboardPage));
-            NavView.SelectedItem = NavView.MenuItems[0];
+            // Create UI manually
+            SetupUI();
+        }
+
+        private void SetupUI()
+        {
+            var grid = new Grid();
+            grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(0, GridUnitType.Auto) });
+            grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+
+            // Title Bar
+            var titleBar = new TitleBar();
+            grid.Children.Add(titleBar);
+
+            // Navigation View
+            _navView = new NavigationView
+            {
+                IsBackButtonVisible = NavigationViewBackButtonVisible.Collapsed,
+                IsPaneOpen = true,
+                PaneDisplayMode = NavigationViewPaneDisplayMode.Left
+            };
+
+            _navView.MenuItems.Add(new NavigationViewItem 
+            { 
+                Icon = new SymbolIcon(Symbol.Home), 
+                Content = "Dashboard", 
+                Tag = "Dashboard" 
+            });
+            _navView.MenuItems.Add(new NavigationViewItem 
+            { 
+                Icon = new SymbolIcon(Symbol.MapPin), 
+                Content = "Live Heatmap", 
+                Tag = "Map" 
+            });
+            _navView.MenuItems.Add(new NavigationViewItem 
+            { 
+                Icon = new SymbolIcon(Symbol.Admin), 
+                Content = "Event Administration", 
+                Tag = "EventAdmin" 
+            });
+            _navView.MenuItems.Add(new NavigationViewItem 
+            { 
+                Icon = new SymbolIcon(Symbol.People), 
+                Content = "Registration", 
+                Tag = "Registration" 
+            });
+            _navView.MenuItems.Add(new NavigationViewItem 
+            { 
+                Icon = new SymbolIcon(Symbol.ContactInfo), 
+                Content = "NFC Credentials", 
+                Tag = "NFCCredentials" 
+            });
+            _navView.MenuItems.Add(new NavigationViewItem 
+            { 
+                Icon = new SymbolIcon(Symbol.BrowsePhotos), 
+                Content = "Access Rules", 
+                Tag = "AccessRules" 
+            });
+            _navView.MenuItems.Add(new NavigationViewItem 
+            { 
+                Icon = new SymbolIcon(Symbol.Emoji), 
+                Content = "Emergency Roll Call", 
+                Tag = "RollCall" 
+            });
+
+            // Content Frame
+            _contentFrame = new Frame();
+            _navView.Content = _contentFrame;
+
+            Grid.SetRow(_navView, 1);
+            grid.Children.Add(_navView);
+
+            this.Content = grid;
+            SetTitleBar(titleBar);
+
+            _navView.SelectionChanged += NavView_SelectionChanged;
+            _contentFrame.Navigate(typeof(DashboardPage));
+            _navView.SelectedItem = _navView.MenuItems[0];
         }
 
         private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
@@ -26,22 +105,25 @@ namespace TapSync
                 switch (tag)
                 {
                     case "Dashboard":
-                        ContentFrame.Navigate(typeof(DashboardPage));
+                        _contentFrame.Navigate(typeof(DashboardPage));
+                        break;
+                    case "Map":
+                        _contentFrame.Navigate(typeof(MapPage));
                         break;
                     case "EventAdmin":
-                        ContentFrame.Navigate(typeof(EventAdminPage));
+                        _contentFrame.Navigate(typeof(EventAdminPage));
                         break;
                     case "Registration":
-                        ContentFrame.Navigate(typeof(RegistrationPage));
+                        _contentFrame.Navigate(typeof(RegistrationPage));
                         break;
                     case "NFCCredentials":
-                        ContentFrame.Navigate(typeof(NFCCredentialsPage));
+                        _contentFrame.Navigate(typeof(NFCCredentialsPage));
                         break;
                     case "AccessRules":
-                        ContentFrame.Navigate(typeof(AccessRulesPage));
+                        _contentFrame.Navigate(typeof(AccessRulesPage));
                         break;
                     case "RollCall":
-                        ContentFrame.Navigate(typeof(RollCallPage));
+                        _contentFrame.Navigate(typeof(RollCallPage));
                         break;
                 }
             }

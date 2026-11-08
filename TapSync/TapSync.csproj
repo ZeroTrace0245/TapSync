@@ -10,7 +10,11 @@
     <UseWinUI>true</UseWinUI>
     <WinUISDKReferences>false</WinUISDKReferences>
     <Nullable>enable</Nullable>
+    <EnableXAMLCodeGen>true</EnableXAMLCodeGen>
   </PropertyGroup>
+  <ItemGroup>
+    <Page Remove="Views\HeatmapPage.xaml" />
+  </ItemGroup>
   <ItemGroup>
     <Content Include="AppIcon.ico" />
   </ItemGroup>
@@ -23,6 +27,12 @@
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2957" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.6.5" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools.WinApp" Version="0.7.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Views\HeatmapPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </None>
   </ItemGroup>
 
     <!-- Publish Properties -->

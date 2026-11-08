@@ -111,6 +111,11 @@ namespace TapSync.Services
             return _attendees.Where(a => a.EventId == eventId).ToList();
         }
 
+        public IEnumerable<Attendee> GetAllAttendees()
+        {
+            return new List<Attendee>(_attendees);
+        }
+
         public Attendee? GetAttendee(string attendeeId)
         {
             return _attendees.FirstOrDefault(a => a.Id == attendeeId);

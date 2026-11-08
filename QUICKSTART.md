@@ -76,24 +76,102 @@ Each has:
 
 ## 🔧 Architecture
 
+### Application Structure
 ```
-App.xaml (Entry Point)
-└── MainWindow.xaml (Navigation Shell)
-	├── Navigation Sidebar
-	└── Content Frame
-		├── DashboardPage (Default)
-		├── AttendeesPage
-		└── AccessPage
+┌─────────────────────────────────────────────────────────────────┐
+│                      TapSync Application                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ Entry Point: App.xaml (Application Lifecycle)            │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                          ↓                                        │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ MainWindow.xaml (Navigation Shell)                        │   │
+│  │  ├─ Navigation Sidebar (Icon-based page switching)       │   │
+│  │  ├─ Content Frame (Dynamic page loading)                 │   │
+│  │  └─ Status Bar (Footer info)                             │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│          ↓                                ↓              ↓        │
+│  ┌────────────────┐  ┌──────────────┐  ┌─────────────┐          │
+│  │ DashboardPage  │  │ AttendeesPage│  │ AccessPage  │          │
+│  │  (Default)     │  │              │  │             │          │
+│  │                │  │  • Search    │  │  • Activity │          │
+│  │ • Metrics      │  │  • Details   │  │  • Timeline │          │
+│  │ • Charts       │  │  • Check-in  │  │  • Status   │          │
+│  │ • Activity Log │  │              │  │             │          │
+│  └────────────────┘  └──────────────┘  └─────────────┘          │
+│                          ↓ (All pages consume)                   │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ Services Layer                                            │   │
+│  │  └─ MockDataService (Data provider, business logic)      │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                          ↓ (All services use)                    │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ Models Layer (Data Classes)                              │   │
+│  │  ├─ Event (Conference details)                           │   │
+│  │  ├─ Attendee (Participant info)                          │   │
+│  │  ├─ Credential (NFC access credentials)                  │   │
+│  │  ├─ AccessRule (Gate access policies)                    │   │
+│  │  └─ AccessLog (Activity tracking)                        │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                   │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-Models (Data Classes)
-├── Event
-├── Attendee
-├── Credential
-├── AccessRule
-└── AccessLog
+### Data Flow Diagram
+```
+┌─────────────────────────────────────┐
+│   MockDataService.Initialize()      │
+│  (Generates mock event & attendees) │
+└─────────────┬───────────────────────┘
+			  │
+			  ├─────────────────────────┬──────────────────────┐
+			  ↓                         ↓                      ↓
+		┌──────────────┐    ┌──────────────────┐    ┌─────────────────┐
+		│ Event Model  │    │ Attendee List    │    │ AccessLog List  │
+		│              │    │                  │    │                 │
+		│ • Name       │    │ • ID, Name       │    │ • Timestamp     │
+		│ • Venue      │    │ • Email          │    │ • User          │
+		│ • Dates      │    │ • Category       │    │ • Gate          │
+		│ • Capacity   │    │ • Credential     │    │ • Status        │
+		└──────────────┘    │ • CheckIn Status │    └─────────────────┘
+							└──────────────────┘
+			  ↓                         ↓                      ↓
+		┌─────────────────────────────────────────────────────────┐
+		│        Pages Bind to Models via Properties              │
+		│  (ItemsSource, SelectedItem, ObservableCollection)      │
+		└─────────────────────────────────────────────────────────┘
+			  ↓                         ↓                      ↓
+		┌──────────────┐    ┌──────────────────┐    ┌─────────────────┐
+		│ DashboardPage│    │ AttendeesPage    │    │ AccessPage      │
+		│              │    │                  │    │                 │
+		│ Displays:    │    │ Displays:        │    │ Displays:       │
+		│ • Metrics    │    │ • Attendee list  │    │ • Activity log  │
+		│ • Charts     │    │ • Search results │    │ • Timeline      │
+		│ • Activity   │    │ • Detail view    │    │ • Status info   │
+		└──────────────┘    └──────────────────┘    └─────────────────┘
+```
 
-Services (Business Logic)
-└── MockDataService (Provides sample data)
+### Component Dependencies
+```
+UI Layer (Views)
+│
+├─→ Services Layer (MockDataService)
+│   │
+│   └─→ Models Layer (Data Objects)
+│       │
+│       ├─ Event
+│       ├─ Attendee
+│       ├─ Credential
+│       ├─ AccessRule
+│       └─ AccessLog
+│
+└─→ WinUI 3 Framework
+	├─ XAML Controls
+	├─ Data Binding
+	├─ Navigation
+	└─ Visual Styling
 ```
 
 ## 💡 Key Features Working
@@ -109,6 +187,7 @@ Services (Business Logic)
 ## 🎯 Next Steps (To Extend)
 
 ### Phase 1: Add More Features
+- ✅ **Live Location Heatmap** (In Development) - Real-time attendee tracking with density visualization, zone-based analytics, and category filtering
 - Gate validation logic
 - Credential management UI
 - Event setup wizard
@@ -119,35 +198,63 @@ Services (Business Logic)
 - Implement authentication
 
 ### Phase 3: Advanced Features
-- NFC reader integration
-- Offline mode
-- Real-time synchronization
-- Emergency roll-call workflow
+- Full NFC reader integration
+- Offline mode with sync
+- Real-time WebSocket synchronization
+- Emergency roll-call workflow with automated notifications
 
-## 📝 File Locations
+## 📝 File Locations & Structure
 
 ```
 Project Root: D:\GitHub repos\TapSync WinUI 3\TapSync\
 
-TapSync/
-├── TapSync.slnx              ← Open this file
-├── README.md                 ← Full documentation
-├── TapSync/
-│   ├── App.xaml/cs           ← Entry point
-│   ├── MainWindow.xaml/cs    ← Main window
-│   ├── Models/               ← Data models
-│   │   ├── Event.cs
-│   │   ├── Attendee.cs
-│   │   ├── Credential.cs
-│   │   ├── AccessRule.cs
-│   │   └── AccessLog.cs
-│   ├── Services/             ← Business logic
-│   │   └── MockDataService.cs
-│   └── Views/                ← UI Pages
-│       ├── DashboardPage.xaml/cs
-│       ├── AttendeesPage.xaml/cs
-│       └── AccessPage.xaml/cs
-└── TapSync (Package)/        ← Packaging
+📦 TapSync.slnx (Solution File - Open this)
+│
+└─ 📁 TapSync/ (Main Application Project)
+   │
+   ├─ 🎯 Entry Point
+   │  ├─ App.xaml              ← Application lifecycle, resource definitions
+   │  ├─ App.xaml.cs           ← App initialization, event handlers
+   │  ├─ MainWindow.xaml       ← Main UI shell with navigation
+   │  └─ MainWindow.xaml.cs    ← Navigation logic, page loading
+   │
+   ├─ 📂 Models/ (Data Classes)
+   │  ├─ Event.cs              ← Conference/event details
+   │  ├─ Attendee.cs           ← Participant information
+   │  ├─ Credential.cs         ← NFC credential data
+   │  ├─ AccessRule.cs         ← Gate access policies
+   │  └─ AccessLog.cs          ← Activity & access tracking
+   │
+   ├─ 🔧 Services/ (Business Logic)
+   │  ├─ MockDataService.cs    ← Generates realistic mock data
+   │  │                           (Event, Attendees, AccessLogs)
+   │  └─ IDataService.cs       ← Service interface (for future real DB)
+   │
+   ├─ 🎨 Views/ (UI Pages)
+   │  ├─ DashboardPage/
+   │  │  ├─ DashboardPage.xaml          ← Dashboard layout & controls
+   │  │  └─ DashboardPage.xaml.cs       ← Metrics, charts, logic
+   │  ├─ AttendeesPage/
+   │  │  ├─ AttendeesPage.xaml          ← Attendee list layout
+   │  │  └─ AttendeesPage.xaml.cs       ← Search, filter, check-in
+   │  └─ AccessPage/
+   │     ├─ AccessPage.xaml             ← Activity log layout
+   │     └─ AccessPage.xaml.cs          ← Log display, filtering
+   │
+   ├─ 📚 Assets/ (Resources)
+   │  ├─ Fonts/                ← Custom typography
+   │  ├─ Icons/                ← Navigation & UI icons
+   │  └─ Styles/               ← Theme & control styles
+   │
+   ├─ 📋 Configuration Files
+   │  ├─ TapSync.csproj        ← Project configuration
+   │  ├─ app.manifest          ← Application manifest
+   │  └─ package.appxmanifest  ← Windows app manifest
+   │
+   └─ 📖 Documentation
+      ├─ README.md             ← Full project documentation
+      ├─ QUICKSTART.md         ← This file (Getting started guide)
+      └─ TapSyn.md             ← Project proposal & vision
 ```
 
 ## 🐛 Troubleshooting
