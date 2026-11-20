@@ -13,189 +13,70 @@ using Windows.UI;
 
 namespace TapSync.Views
 {
-    public sealed class MapPage : Page
+    public sealed partial class MapPage : Page
     {
-        private LocationService _locationService;
-        private LocationSimulationService _simulationService;
+        private readonly LocationService _locationService;
+        private readonly LocationSimulationService _simulationService;
         private bool _showHeatmap = true;
         private bool _showZones = true;
         private string _currentFilter = "All";
 
-        private ObservableCollection<LocationData> _displayedLocations = new();
-        private ObservableCollection<MapZone> _zones = new();
+        private readonly ObservableCollection<LocationData> _displayedLocations = new();
+        private readonly ObservableCollection<MapZone> _zones = new();
 
         // Map parameters (NYC demo - Times Square area)
         private const double BaseLatitude = 40.7580;
         private const double BaseLongitude = -73.9855;
 
-        public Canvas MapCanvas { get; set; }
-        public TextBlock TotalTrackedText { get; set; }
-        public ItemsControl ZoneStatsItemsControl { get; set; }
-        public ItemsControl AttendeeListItemsControl { get; set; }
-        public Button StartSimulationButton { get; set; }
-        public Button StopSimulationButton { get; set; }
-        public Button ClearAll { get; set; }
-        public ComboBox CategoryFilterComboBox { get; set; }
-        public ToggleButton HeatmapToggleButton { get; set; }
-        public ToggleButton ZonesToggleButton { get; set; }
-
         public MapPage()
         {
-            try
-            {
-                // Set minimal content immediately to let Page initialize
-                this.Content = new Grid();
+            InitializeComponent();
 
-                // Subscribe to Loaded event to defer heavy initialization
-                this.Loaded += MapPage_Loaded;
-            }
-            catch (Exception ex)
+            _locationService = LocationService.GetInstance();
+            _simulationService = LocationSimulationService.GetInstance();
+
+            foreach (var zone in _locationService.GetZones())
             {
-                System.Diagnostics.Debug.WriteLine($"Error in MapPage constructor: {ex}");
-                throw;
+                _zones.Add(zone);
             }
+
+            ZoneStatsItemsControl.ItemsSource = _zones;
+            AttendeeListItemsControl.ItemsSource = _displayedLocations;
+
+            CategoryFilterComboBox.SelectedIndex = 0;
+            CategoryFilterComboBox.SelectionChanged += CategoryFilter_Changed;
+
+            StartSimulationButton.Click += StartSimulation_Click;
+            StopSimulationButton.Click += StopSimulation_Click;
+            ClearAll.Click += ClearAll_Click;
+
+            HeatmapToggleButton.Checked += (s, e) => { _showHeatmap = true; DrawMap(); };
+            HeatmapToggleButton.Unchecked += (s, e) => { _showHeatmap = false; DrawMap(); };
+            ZonesToggleButton.Checked += (s, e) => { _showZones = true; DrawMap(); };
+            ZonesToggleButton.Unchecked += (s, e) => { _showZones = false; DrawMap(); };
+
+            MapCanvas.SizeChanged += MapCanvas_SizeChanged;
+
+            Loaded += MapPage_Loaded;
+            Unloaded += MapPage_Unloaded;
+            ActualThemeChanged += (_, _) => DrawMap();
         }
 
         private void MapPage_Loaded(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                // Now that Page is fully loaded and initialized by the XAML framework,
-                // we can safely initialize services and build the UI
-                _locationService = LocationService.GetInstance();
-                _simulationService = LocationSimulationService.GetInstance();
+            // Subscribe while the page is on screen; the services are singletons and outlive the page.
+            _locationService.LocationUpdated += OnLocationUpdated;
+            _locationService.HeatmapUpdated += OnHeatmapUpdated;
 
-                // Manually initialize UI
-                var stackPanel = new StackPanel { Padding = new Thickness(24) };
-
-                var titleBlock = new TextBlock 
-                { 
-                    Text = "Real-Time Location Heatmap",
-                    Style = Application.Current.Resources["HeaderTextBlockStyle"] as Style
-                };
-                stackPanel.Children.Add(titleBlock);
-
-                TotalTrackedText = new TextBlock { Text = "0", Margin = new Thickness(0, 16, 0, 0) };
-                stackPanel.Children.Add(TotalTrackedText);
-
-                MapCanvas = new Canvas 
-                { 
-                    Height = 400,
-                    Background = new SolidColorBrush(Colors.Transparent),
-                    Margin = new Thickness(0, 16, 0, 0)
-                };
-                stackPanel.Children.Add(MapCanvas);
-
-                ZoneStatsItemsControl = new ItemsControl { Margin = new Thickness(0, 16, 0, 0) };
-                stackPanel.Children.Add(ZoneStatsItemsControl);
-
-                AttendeeListItemsControl = new ItemsControl { Margin = new Thickness(0, 8, 0, 0) };
-                stackPanel.Children.Add(AttendeeListItemsControl);
-
-                StartSimulationButton = new Button 
-                { 
-                    Content = "Start Tracking",
-                    Margin = new Thickness(0, 16, 0, 0)
-                };
-                stackPanel.Children.Add(StartSimulationButton);
-
-                StopSimulationButton = new Button 
-                { 
-                    Content = "Stop Tracking",
-                    Margin = new Thickness(0, 8, 0, 0),
-                    IsEnabled = false
-                };
-                stackPanel.Children.Add(StopSimulationButton);
-
-                ClearAll = new Button 
-                { 
-                    Content = "Clear All",
-                    Margin = new Thickness(0, 8, 0, 0)
-                };
-                stackPanel.Children.Add(ClearAll);
-
-                CategoryFilterComboBox = new ComboBox 
-                { 
-                    PlaceholderText = "Filter by Category",
-                    Margin = new Thickness(0, 8, 0, 0)
-                };
-                CategoryFilterComboBox.Items.Add("All");
-                CategoryFilterComboBox.Items.Add("General");
-                CategoryFilterComboBox.Items.Add("VIP");
-                CategoryFilterComboBox.Items.Add("Staff");
-                CategoryFilterComboBox.Items.Add("Press");
-                stackPanel.Children.Add(CategoryFilterComboBox);
-
-                HeatmapToggleButton = new ToggleButton 
-                { 
-                    Content = "Heatmap View",
-                    IsChecked = true,
-                    Margin = new Thickness(0, 8, 0, 0)
-                };
-                stackPanel.Children.Add(HeatmapToggleButton);
-
-                ZonesToggleButton = new ToggleButton 
-                { 
-                    Content = "Show Zones",
-                    IsChecked = true,
-                    Margin = new Thickness(0, 8, 0, 0)
-                };
-                stackPanel.Children.Add(ZonesToggleButton);
-
-                this.Content = stackPanel;
-
-                InitializeMap();
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error in MapPage_Loaded: {ex}");
-                throw;
-            }
+            TotalTrackedText.Text = _locationService.GetTotalLocationsTracked().ToString();
+            UpdateDisplayedLocations();
+            DrawMap();
         }
 
-        private void InitializeMap()
+        private void MapPage_Unloaded(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                _locationService.LocationUpdated += OnLocationUpdated;
-                _locationService.HeatmapUpdated += OnHeatmapUpdated;
-
-                // Set initial zones
-                var zones = _locationService.GetZones();
-                foreach (var zone in zones)
-                {
-                    _zones.Add(zone);
-                }
-
-                // Set ItemsSource
-                ZoneStatsItemsControl.ItemsSource = _zones;
-                AttendeeListItemsControl.ItemsSource = _displayedLocations;
-
-                // Setup combo box
-                CategoryFilterComboBox.SelectedIndex = 0;
-                CategoryFilterComboBox.SelectionChanged += CategoryFilter_Changed;
-
-                // Setup buttons
-                StartSimulationButton.Click += StartSimulation_Click;
-                StopSimulationButton.Click += StopSimulation_Click;
-                ClearAll.Click += ClearAll_Click;
-
-                // Setup toggles
-                HeatmapToggleButton.Checked += (s, e) => { _showHeatmap = true; DrawMap(); };
-                HeatmapToggleButton.Unchecked += (s, e) => { _showHeatmap = false; DrawMap(); };
-                ZonesToggleButton.Checked += (s, e) => { _showZones = true; DrawMap(); };
-                ZonesToggleButton.Unchecked += (s, e) => { _showZones = false; DrawMap(); };
-
-                // Setup canvas
-                MapCanvas.SizeChanged += MapCanvas_SizeChanged;
-
-                UpdateDisplayedLocations();
-                DrawMap();
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error initializing map: {ex}");
-            }
+            _locationService.LocationUpdated -= OnLocationUpdated;
+            _locationService.HeatmapUpdated -= OnHeatmapUpdated;
         }
 
         private void OnLocationUpdated(object? sender, LocationData location)
@@ -241,8 +122,8 @@ namespace TapSync.Views
 
             if (width <= 0 || height <= 0) return;
 
-            // Draw background
-            MapCanvas.Background = new SolidColorBrush(Color.FromArgb(255, 240, 240, 245));
+            // Subtle grey wash that works on light, dark and picture backgrounds
+            MapCanvas.Background = new SolidColorBrush(Color.FromArgb(20, 128, 128, 128));
 
             // Draw zones if enabled
             if (_showZones)
@@ -359,7 +240,7 @@ namespace TapSync.Views
                 {
                     Text = location.AttendeeName,
                     FontSize = 9,
-                    Foreground = new SolidColorBrush(Colors.Black),
+                    Foreground = TextBrush(),
                     Padding = new Thickness(2, 1, 2, 1)
                 };
 
@@ -377,12 +258,15 @@ namespace TapSync.Views
             const double itemHeight = 25;
 
             // Legend background
+            bool dark = ActualTheme == ElementTheme.Dark;
             var background = new Rectangle
             {
-                Width = 200,
+                Width = 140,
                 Height = 150,
-                Fill = new SolidColorBrush(Color.FromArgb(240, 255, 255, 255)),
-                Stroke = new SolidColorBrush(Colors.Gray),
+                RadiusX = 6,
+                RadiusY = 6,
+                Fill = new SolidColorBrush(dark ? Color.FromArgb(200, 44, 44, 44) : Color.FromArgb(220, 255, 255, 255)),
+                Stroke = new SolidColorBrush(Color.FromArgb(40, 128, 128, 128)),
                 StrokeThickness = 1
             };
             Canvas.SetLeft(background, legendX);
@@ -393,7 +277,8 @@ namespace TapSync.Views
             {
                 Text = "Legend",
                 FontSize = 12,
-                Margin = new Thickness(8)
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                Foreground = TextBrush()
             };
             Canvas.SetLeft(legendTitle, legendX + 8);
             Canvas.SetTop(legendTitle, legendY + 8);
@@ -418,13 +303,16 @@ namespace TapSync.Views
                 {
                     Text = categories[i].Item2,
                     FontSize = 11,
-                    Foreground = new SolidColorBrush(Colors.Black)
+                    Foreground = TextBrush()
                 };
                 Canvas.SetLeft(label, legendX + 28);
                 Canvas.SetTop(label, y);
                 canvas.Children.Add(label);
             }
         }
+
+        private SolidColorBrush TextBrush() =>
+            new(ActualTheme == ElementTheme.Dark ? Colors.White : Colors.Black);
 
         private double LongitudeToX(double longitude, double width)
         {

@@ -1,133 +1,169 @@
+using System;
+using System.Collections.Generic;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
+using TapSync.Services;
 using TapSync.Views;
+using Windows.UI;
 
 namespace TapSync
 {
     public sealed partial class MainWindow : Window
     {
-        private Frame _contentFrame;
-        private NavigationView _navView;
+        private static readonly Dictionary<string, Type> Pages = new()
+        {
+            ["Dashboard"] = typeof(DashboardPage),
+            ["Map"] = typeof(MapPage),
+            ["EventAdmin"] = typeof(EventAdminPage),
+            ["Registration"] = typeof(RegistrationPage),
+            ["NFCCredentials"] = typeof(NFCCredentialsPage),
+            ["AccessRules"] = typeof(AccessRulesPage),
+            ["RollCall"] = typeof(RollCallPage),
+        };
+
+        private readonly AppSettingsService _settings = AppSettingsService.Instance;
+        private string? _loadedImagePath;
+        private int _applyVersion;
 
         public MainWindow()
         {
-            // Initialize the basic window
-            this.Content = new Grid();
-            ExtendsContentIntoTitleBar = true;
-            AppWindow.SetIcon("AppIcon.ico");
+            InitializeComponent();
 
-            // Create UI manually
-            SetupUI();
+            ExtendsContentIntoTitleBar = true;
+            SetTitleBar(AppTitleBar);
+            AppWindow.SetIcon("AppIcon.ico");
+            SizeAndCenterWindow(1280, 840);
+
+            _settings.SettingsChanged += Settings_Changed;
+            RootGrid.ActualThemeChanged += (_, _) => ApplyOverlay();
+            Closed += (_, _) => _settings.SettingsChanged -= Settings_Changed;
+
+            ApplySettings();
+
+            // Selecting the first item raises SelectionChanged, which performs the first navigation.
+            NavView.SelectedItem = NavView.MenuItems[0];
         }
 
-        private void SetupUI()
+        /// <summary>Opens at the preferred size, shrunk to fit the screen's work area, and centred.</summary>
+        private void SizeAndCenterWindow(int preferredWidth, int preferredHeight)
         {
-            var grid = new Grid();
-            grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(0, GridUnitType.Auto) });
-            grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            var workArea = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Nearest).WorkArea;
+            double scale = (Content?.XamlRoot?.RasterizationScale) ?? GetDpiScale();
 
-            // Title Bar
-            var titleBar = new TitleBar();
-            grid.Children.Add(titleBar);
+            int width = Math.Min((int)(preferredWidth * scale), (int)(workArea.Width * 0.92));
+            int height = Math.Min((int)(preferredHeight * scale), (int)(workArea.Height * 0.92));
 
-            // Navigation View
-            _navView = new NavigationView
-            {
-                IsBackButtonVisible = NavigationViewBackButtonVisible.Collapsed,
-                IsPaneOpen = true,
-                PaneDisplayMode = NavigationViewPaneDisplayMode.Left
-            };
+            AppWindow.MoveAndResize(new Windows.Graphics.RectInt32(
+                workArea.X + (workArea.Width - width) / 2,
+                workArea.Y + (workArea.Height - height) / 2,
+                width,
+                height));
+        }
 
-            _navView.MenuItems.Add(new NavigationViewItem 
-            { 
-                Icon = new SymbolIcon(Symbol.Home), 
-                Content = "Dashboard", 
-                Tag = "Dashboard" 
-            });
-            _navView.MenuItems.Add(new NavigationViewItem 
-            { 
-                Icon = new SymbolIcon(Symbol.MapPin), 
-                Content = "Live Heatmap", 
-                Tag = "Map" 
-            });
-            _navView.MenuItems.Add(new NavigationViewItem 
-            { 
-                Icon = new SymbolIcon(Symbol.Admin), 
-                Content = "Event Administration", 
-                Tag = "EventAdmin" 
-            });
-            _navView.MenuItems.Add(new NavigationViewItem 
-            { 
-                Icon = new SymbolIcon(Symbol.People), 
-                Content = "Registration", 
-                Tag = "Registration" 
-            });
-            _navView.MenuItems.Add(new NavigationViewItem 
-            { 
-                Icon = new SymbolIcon(Symbol.ContactInfo), 
-                Content = "NFC Credentials", 
-                Tag = "NFCCredentials" 
-            });
-            _navView.MenuItems.Add(new NavigationViewItem 
-            { 
-                Icon = new SymbolIcon(Symbol.BrowsePhotos), 
-                Content = "Access Rules", 
-                Tag = "AccessRules" 
-            });
-            _navView.MenuItems.Add(new NavigationViewItem 
-            { 
-                Icon = new SymbolIcon(Symbol.Emoji), 
-                Content = "Emergency Roll Call", 
-                Tag = "RollCall" 
-            });
+        private double GetDpiScale()
+        {
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            return GetDpiForWindow(hwnd) / 96.0;
+        }
 
-            // Content Frame
-            _contentFrame = new Frame();
-            _navView.Content = _contentFrame;
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern uint GetDpiForWindow(IntPtr hwnd);
 
-            Grid.SetRow(_navView, 1);
-            grid.Children.Add(_navView);
-
-            this.Content = grid;
-            SetTitleBar(titleBar);
-
-            _navView.SelectionChanged += NavView_SelectionChanged;
-            _contentFrame.Navigate(typeof(DashboardPage));
-            _navView.SelectedItem = _navView.MenuItems[0];
+        private void AppTitleBar_PaneToggleRequested(TitleBar sender, object args)
+        {
+            NavView.IsPaneOpen = !NavView.IsPaneOpen;
         }
 
         private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
         {
-            if (args.SelectedItemContainer is NavigationViewItem item)
-            {
-                string tag = (string)item.Tag;
+            Type? pageType = args.IsSettingsSelected
+                ? typeof(SettingsPage)
+                : args.SelectedItemContainer?.Tag is string tag && Pages.TryGetValue(tag, out var type) ? type : null;
 
-                switch (tag)
+            if (pageType != null && ContentFrame.CurrentSourcePageType != pageType)
+            {
+                ContentFrame.Navigate(pageType, null, new EntranceNavigationTransitionInfo());
+            }
+        }
+
+        private void Settings_Changed(object? sender, EventArgs e) => ApplySettings();
+
+        private async void ApplySettings()
+        {
+            var version = ++_applyVersion;
+            var s = _settings.Current;
+
+            // Theme
+            RootGrid.RequestedTheme = s.Theme switch
+            {
+                AppTheme.Light => ElementTheme.Light,
+                AppTheme.Dark => ElementTheme.Dark,
+                _ => ElementTheme.Default
+            };
+            AppWindow.TitleBar.PreferredTheme = s.Theme switch
+            {
+                AppTheme.Light => TitleBarTheme.Light,
+                AppTheme.Dark => TitleBarTheme.Dark,
+                _ => TitleBarTheme.UseDefaultAppMode
+            };
+
+            // Window material: Acrylic blurs the desktop behind the window, Mica tints with the wallpaper.
+            if (s.BackgroundMode == BackgroundMode.Acrylic)
+            {
+                if (SystemBackdrop is not DesktopAcrylicBackdrop) SystemBackdrop = new DesktopAcrylicBackdrop();
+            }
+            else if (SystemBackdrop is not MicaBackdrop)
+            {
+                SystemBackdrop = new MicaBackdrop { Kind = Microsoft.UI.Composition.SystemBackdrops.MicaKind.Base };
+            }
+
+            // Picture
+            if (s.BackgroundMode == BackgroundMode.Image && _settings.HasUsableImage)
+            {
+                if (!string.Equals(_loadedImagePath, s.BackgroundImagePath, StringComparison.OrdinalIgnoreCase))
                 {
-                    case "Dashboard":
-                        _contentFrame.Navigate(typeof(DashboardPage));
-                        break;
-                    case "Map":
-                        _contentFrame.Navigate(typeof(MapPage));
-                        break;
-                    case "EventAdmin":
-                        _contentFrame.Navigate(typeof(EventAdminPage));
-                        break;
-                    case "Registration":
-                        _contentFrame.Navigate(typeof(RegistrationPage));
-                        break;
-                    case "NFCCredentials":
-                        _contentFrame.Navigate(typeof(NFCCredentialsPage));
-                        break;
-                    case "AccessRules":
-                        _contentFrame.Navigate(typeof(AccessRulesPage));
-                        break;
-                    case "RollCall":
-                        _contentFrame.Navigate(typeof(RollCallPage));
-                        break;
+                    var bitmap = await ImageLoader.LoadAsync(s.BackgroundImagePath);
+                    if (version != _applyVersion) return; // a newer change arrived while loading
+
+                    BackgroundImage.Source = bitmap;
+                    _loadedImagePath = bitmap != null ? s.BackgroundImagePath : null;
                 }
             }
+            else
+            {
+                BackgroundImage.Source = null;
+                _loadedImagePath = null;
+            }
+
+            ApplyOverlay();
+        }
+
+        private void ApplyOverlay()
+        {
+            var s = _settings.Current;
+            bool showPicture = s.BackgroundMode == BackgroundMode.Image && BackgroundImage.Source != null;
+
+            BackgroundImage.Visibility = showPicture ? Visibility.Visible : Visibility.Collapsed;
+            BackdropOverlay.Visibility = showPicture ? Visibility.Visible : Visibility.Collapsed;
+            if (!showPicture) return;
+
+            // Tint towards the theme's base colour so text on top stays readable.
+            Color tint = RootGrid.ActualTheme == ElementTheme.Dark
+                ? Color.FromArgb(255, 32, 32, 32)
+                : Color.FromArgb(255, 243, 243, 243);
+
+            BackdropOverlay.Background = s.BlurEnabled
+                ? new AcrylicBrush
+                {
+                    TintColor = tint,
+                    TintOpacity = s.OverlayOpacity,
+                    TintLuminosityOpacity = Math.Max(0.1, s.OverlayOpacity),
+                    FallbackColor = Color.FromArgb(230, tint.R, tint.G, tint.B)
+                }
+                : new SolidColorBrush(tint) { Opacity = s.OverlayOpacity };
         }
     }
 }
-

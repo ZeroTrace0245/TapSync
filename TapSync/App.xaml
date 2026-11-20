@@ -8,12 +8,62 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
-                <!-- Other merged dictionaries here -->
             </ResourceDictionary.MergedDictionaries>
-            <!-- Color resources for status indicators -->
-            <SolidColorBrush x:Key="SuccessFill" Color="#00CC00" />
-            <SolidColorBrush x:Key="ErrorFill" Color="#FF0000" />
-            <SolidColorBrush x:Key="WarningFill" Color="#FFC000" />
+
+            <!-- Colour resources for status indicators -->
+            <SolidColorBrush x:Key="SuccessFill" Color="#0F7B0F" />
+            <SolidColorBrush x:Key="ErrorFill" Color="#C42B1C" />
+            <SolidColorBrush x:Key="WarningFill" Color="#9D5D00" />
+
+            <!-- Category colours, shared by the dashboard and the heatmap -->
+            <SolidColorBrush x:Key="CategoryGeneralBrush" Color="#2196F3" />
+            <SolidColorBrush x:Key="CategoryVipBrush" Color="#FFC107" />
+            <SolidColorBrush x:Key="CategoryStaffBrush" Color="#4CAF50" />
+            <SolidColorBrush x:Key="CategoryPressBrush" Color="#F44336" />
+
+            <!-- Page layout -->
+            <Thickness x:Key="PagePadding">36,20,36,36</Thickness>
+            <x:Double x:Key="PageMaxWidth">1100</x:Double>
+
+            <Style x:Key="PageHeaderTextStyle" TargetType="TextBlock" BasedOn="{StaticResource TitleTextBlockStyle}">
+                <Setter Property="Margin" Value="0,0,0,4" />
+            </Style>
+
+            <Style x:Key="PageSubtitleTextStyle" TargetType="TextBlock" BasedOn="{StaticResource BodyTextBlockStyle}">
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+                <Setter Property="Margin" Value="0,0,0,20" />
+            </Style>
+
+            <Style x:Key="SectionHeaderTextStyle" TargetType="TextBlock" BasedOn="{StaticResource BodyStrongTextBlockStyle}">
+                <Setter Property="Margin" Value="1,24,0,8" />
+            </Style>
+
+            <Style x:Key="CaptionSecondaryTextStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+            </Style>
+
+            <!-- Rounded, slightly translucent card that lets the backdrop show through -->
+            <Style x:Key="CardBorderStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="{StaticResource OverlayCornerRadius}" />
+                <Setter Property="Padding" Value="20" />
+            </Style>
+
+            <!-- Windows 11 Settings-style row -->
+            <Style x:Key="SettingsCardStyle" TargetType="Border" BasedOn="{StaticResource CardBorderStyle}">
+                <Setter Property="Padding" Value="16,12" />
+                <Setter Property="MinHeight" Value="68" />
+                <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+            </Style>
+
+            <Style x:Key="SettingsIconStyle" TargetType="FontIcon">
+                <Setter Property="FontSize" Value="20" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="Margin" Value="4,0,8,0" />
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
